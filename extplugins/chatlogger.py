@@ -79,6 +79,7 @@ class ChatloggerPlugin(b3.plugin.Plugin):
     _save2db = None
     _save2file = None
     _file_rotation_rate = None
+    _id_tag = ''
     
     
     def onLoadConfig(self):
@@ -115,6 +116,10 @@ class ChatloggerPlugin(b3.plugin.Plugin):
         if self._save2file:
                 self.loadConfig_file()
     
+        if self.config.has_option('general','server_id_tag'):
+            self._id_tag = self.config.get('general', 'server_id_tag')
+            
+        self.debug('Server id tag is : %s' % self._id_tag)
     
     def loadConfig_file(self):
         try:
@@ -416,6 +421,8 @@ class ChatData(AbstractData):
         self.target_name = None
         self.target_team = None
         
+        if self.plugin._id_tag != '':
+            self.msg_type = self.plugin._id_tag + '-' + self.msg_type
     def _insertquery(self):
         return """INSERT INTO {table_name} 
             (msg_time, msg_type, client_id, client_name, client_team, msg, target_id, target_name, target_team) 
@@ -442,12 +449,14 @@ class ChatData(AbstractData):
 
     def _save2file(self, data):
         self.plugin.debug("writing to file")
-        self.plugin._filelogger.info("@%(client_id)s [%(client_name)s] to %(type)s:\t%(msg)s" % data)
+        self.plugin._filelogger.info("@%(client_id)s [%(client_name)s] to %(type)s:\t%(msg)r" % data)
 
 
 class TeamChatData(ChatData):
     msg_type = 'TEAM'
     
+    def __init__(self, plugin, event):
+        ChatData.__init__(self, plugin, event)
     
 class PrivateChatData(ChatData):
     msg_type = 'PM'
